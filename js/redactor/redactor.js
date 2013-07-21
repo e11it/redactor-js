@@ -1,11 +1,11 @@
 /*
-	Redactor v7.6.3
-	Updated 31.05.2012
+	Redactor v7.6.1
+	Updated 22.05.2012
 	
 	http://redactorjs.com/
 		
 	Copyright (c) 2009-2012, Imperavi Ltd.
-	Licensed under Creative Commons Attribution-NonCommercial 3.0 license. 
+	Dual licensed under the MIT or GPL Version 2 licenses.
 	
 	Usage: $('#content').redactor();	
 */
@@ -192,8 +192,6 @@ var RTOOLBAR = {};
 					this.pasteCleanUp();
 	
 				}, this), 200);
-				
-
 
 			}, this));
 
@@ -211,7 +209,7 @@ var RTOOLBAR = {};
 			.keyup($.proxy(function(e)
 			{
 				var key = e.keyCode || e.which;
-				
+
 				if (this.opts.autoformat)
 				{
 					// if empty
@@ -220,14 +218,14 @@ var RTOOLBAR = {};
 					// new line p
 					if (key == 13 && !e.shiftKey && !e.ctrlKey && !e.metaKey) return this.formatNewLine(e);
 				}
-				//console.log(e);
+
 				this.syncCode();
 
 			}, this));
 			
 			// toolbar
 			this.buildToolbar();
-			
+
 			// resizer
 			if (this.opts.autoresize === false) this.buildResizer();
 			else this.observeAutoResize();
@@ -241,13 +239,6 @@ var RTOOLBAR = {};
 			// observers
 			this.observeImages();
 	
-			// fullscreen on start
-			if (this.opts.fullscreen) 
-			{
-				this.opts.fullscreen = false;
-				this.fullscreen();
-			}
-				
 			// focus
 			if (this.opts.focus) this.focus();
 
@@ -295,8 +286,7 @@ var RTOOLBAR = {};
 			{
 				if (s.src)
 				{
-					// Match redactor.js or redactor.min.js, followed by an optional querystring (often used for cache purposes) 
-					var regexp = new RegExp(/\/redactor(\.min)?\.js(\?.*)?/);
+					var regexp = new RegExp(/\/redactor\.min\.js|\/redactor\.js/);
 					if (s.src.match(regexp)) this.opts.path = s.src.replace(regexp, '');
 				}
 			}, this));
@@ -343,7 +333,7 @@ var RTOOLBAR = {};
 			frameHtml += html;
 			frameHtml += '</div></body></html>';
 			return frameHtml;
-		},		
+		},
 		getDoc: function(frame)
 		{
 			if (frame.contentDocument) return frame.contentDocument;
@@ -358,7 +348,7 @@ var RTOOLBAR = {};
 		syncCode: function()
 		{
 			var html = this.formating(this.$editor.html());
-			this.$el.val(html);			
+			this.$el.val(html);
 		},
 		
 		// API functions
@@ -442,17 +432,27 @@ var RTOOLBAR = {};
 		},
 		observeAutoResize: function()
 		{
-			this.$editor.css({ 'min-height':this.$el.height()+'px' });
-			this.$frame.css({ 'overflow-x':'auto', 'overflow-y':'hidden' });
-			this.$frame.load($.proxy(this.setAutoSize, this));
+			this.setAutoSize();
 			$(this.doc).keyup($.proxy(this.setAutoSize, this));
+			
 		},
 		setAutoSize: function()
 		{
-			this.$frame.height(this.$editor.outerHeight(true)+30);
+			var oheight = parseInt(this.height.replace('px', ''));
+			var height = this.getEditorHeight();
+		
+			if (height <= oheight) height = oheight+40;
+			else height += 40;
+
+			this.$frame.height(height);
+			this.$el.height(height);
 		},
-		
-		
+		getEditorHeight: function()
+		{
+			return this.$editor.height() + this.normalize(this.$editor.css('margin-top')) + this.normalize(this.$editor.css('margin-bottom'))
+			+ this.normalize(this.$editor.css('padding-top')) + this.normalize(this.$editor.css('padding-bottom'));
+		},
+
 		// EXECCOMMAND
 		execCommand: function(cmd, param)
 		{
@@ -486,13 +486,13 @@ var RTOOLBAR = {};
 				if (e.preventDefault) e.preventDefault();
 				
 				element = $(this.getCurrentNode());
-				if (element.get(0).tagName == 'DIV' && (element.html() == '' || element.html() == '<br>'))
+				if (element.get(0).tagName == 'DIV')
 				{
 					newElement = $('<p>').append(element.clone().get(0).childNodes);
 					element.replaceWith(newElement);
 					newElement.html('<br />');
 					this.setFocusNode(newElement.get(0));
-
+					
 					this.syncCode();
 					return false;
 				 }
@@ -628,7 +628,7 @@ var RTOOLBAR = {};
 			return html;
 		},
 
-		// REMOVE CLASSES AND STYLES
+		// REMOVE ALL CLASSES AND STYLES
 		cleanUpClasses: function(html)
 		{
 			html = html.replace(/\s*class="TOC(.*?)"/gi, "" );
@@ -639,7 +639,6 @@ var RTOOLBAR = {};
 		},
 		cleanUpStyles: function(html)
 		{
-
 			html = html.replace( /\s*mso-[^:]+:[^;"]+;?/gi, "" );
 			html = html.replace( /\s*margin(.*?)pt\s*;/gi, "" );
 			html = html.replace( /\s*margin(.*?)cm\s*;/gi, "" );
@@ -710,8 +709,6 @@ var RTOOLBAR = {};
 
 			html = this.cleanUp(html);
 			html = this.formating(html);
-			
-			html = html.replace(/<b(.*?)id="internal-source-marker(.*?)">([\w\W]*?)<\/b>/gi, "$3");
 
 			html = html.replace(/#marker#/, '<span id="pastemarkerend">&nbsp;</span>');
 
@@ -721,7 +718,6 @@ var RTOOLBAR = {};
 			this.setFocusNode(node);
 
 			this.syncCode();
-			this.observeImages();
 		},
 		
 		// TEXTAREA CODE FORMATTING
@@ -759,13 +755,12 @@ var RTOOLBAR = {};
 			html = html.replace(/[\s\n]*$/, '');
 
 			// empty tags
-			var etags = ["<pre></pre>","<blockquote>\\s*</blockquote>","<em>\\s*</em>","<b>\\s*</b>","<ul></ul>","<ol></ol>","<li></li>","<table></table>","<tr></tr>","<span>\\s*<span>", "<span>&nbsp;<span>", "<p>\\s*</p>", "<p>&nbsp;</p>",  "<p>\\s*<br>\\s*</p>", "<div>\\s*</div>", "<div>\\s*<br>\\s*</div>"];
+			var etags = ["<pre></pre>","<blockquote></blockquote>","<em></em>","<b></b>","<ul></ul>","<ol></ol>","<li></li>","<table></table>","<tr></tr>","<span><span>", "<span>&nbsp;<span>", "<p> </p>", "<p></p>", "<p>&nbsp;</p>",  "<p><br></p>", "<div></div>"];
 			for (var i = 0; i < etags.length; ++i)
 			{
 				var bbb = etags[i];
 				html = html.replace(new RegExp(bbb,'gi'), "");
 			}
-			
 			
 			// add formatting before
 			var lb = '\r\n';
@@ -805,7 +800,7 @@ var RTOOLBAR = {};
 				html = this.$editor.html();
 				html = $.trim(this.formating(html));
 				
-				this.$el.val(html).show().focus();
+				this.$el.val(html).show();
 				
 				this.setBtnActive('html');
 				this.opts.visual = false;
@@ -856,8 +851,6 @@ var RTOOLBAR = {};
 			
 			$.each(RTOOLBAR[this.opts.toolbar], $.proxy(function(key,s)
 			{
-				if (this.opts.fileUpload === false && key == 'file') return true;
-			
 				var li = $('<li>');
 				
 				if (key == 'fullscreen') $(li).addClass('redactor_toolbar_right');
@@ -967,7 +960,7 @@ var RTOOLBAR = {};
 			this.syncCode();
 		},
 		
-		// DROPDOWNS
+		// DROPDOWN
 		showDropDown: function(e, dropdown, key)
 		{
 			this.hideAllDropDown();
@@ -1068,7 +1061,7 @@ var RTOOLBAR = {};
 			}
 		},
 
-		// BUTTONS MANIPULATIONS
+		// =BUTTONS MANIPULATIONS
 		getBtn: function(key)
 		{
 			return $(this.$toolbar.find('a.redactor_btn_' + key));
@@ -1119,14 +1112,13 @@ var RTOOLBAR = {};
 				
 				$(document.body).prepend(this.$box).css('overflow', 'hidden');
 	
-				this.$editor = this.enable(html);				
+				this.$editor = this.enable(html);
 				
 				$(this.doc).click($.proxy(this.hideAllDropDown, this));
 				// focus always on page
 				$(this.doc).click($.proxy(function(e) { this.$editor.focus(); }, this));
 				
 				this.observeImages();
-				this.$box.find('.redactor_resizer').hide();
 
 				this.fullScreenResize();
 				$(window).resize($.proxy(this.fullScreenResize, this));
@@ -1153,7 +1145,6 @@ var RTOOLBAR = {};
 				
 				this.observeImages();
 				this.observeAutoResize();
-				this.$box.find('.redactor_resizer').show();
 				
 				$(this.doc).click($.proxy(this.hideAllDropDown, this));
 				// focus always on page
@@ -1173,7 +1164,7 @@ var RTOOLBAR = {};
 			var hfix = 42;
 			if (this.opts.air) hfix = 2;
 			
-			var height = $(window).height() - hfix;		
+			var height = $(window).height() - hfix;
 			
 			this.$box.width($(window).width() - 2);
 			this.$frame.height(height);
@@ -1319,7 +1310,7 @@ var RTOOLBAR = {};
 		// TABLE
 		showTable: function()
 		{
-			this.modalInit(RLANG.table, this.opts.path + '/plugins/table.html', 300, $.proxy(function()
+			this.modalInit(RLANG.table, this.opts.path + '/plugins/table.html', 230, $.proxy(function()
 			{
 				$('#redactor_table_rows').focus();
 				$('#redactor_insert_table_btn').click($.proxy(this.insertTable, this));
@@ -1576,40 +1567,21 @@ var RTOOLBAR = {};
 				}
 				else
 				{
-					$('#redactor_tabs a').eq(1).remove();
+					$('#redactor_tabs li').eq(1).remove();
 				}
 				
-				if (this.opts.imageUpload !== false)
+				// dragupload
+				if ($('#redactor_file').size() !== 0)
 				{
-					// dragupload
-					if ($('#redactor_file').size() !== 0)
+					$('#redactor_file').dragupload(
 					{
-						$('#redactor_file').dragupload(
-						{
-							url: this.opts.imageUpload,
-							success: $.proxy(this.imageUploadCallback, this)
-						});
-					}
+						url: this.opts.imageUpload,
+						success: $.proxy(this.imageUploadCallback, this)
+					});
+				}
 
-					// ajax upload
-					this.uploadInit('redactor_file', { auto: true, url: this.opts.imageUpload, success: $.proxy(this.imageUploadCallback, this)  });
-				}
-				else
-				{
-					$('.redactor_tab').hide();
-					if (this.opts.imageGetJson === false) 
-					{
-						$('#redactor_tabs').remove();
-						$('#redactor_tab3').show();
-					}
-					else 
-					{
-						var tabs = $('#redactor_tabs a');
-						tabs.eq(0).remove();
-						tabs.eq(1).addClass('redactor_tabs_act');						
-						$('#redactor_tab2').show();
-					}
-				}
+				// ajax upload
+				this.uploadInit('redactor_file', { auto: true, url: this.opts.imageUpload, success: $.proxy(this.imageUploadCallback, this)  });
 
 				$('#redactor_upload_btn').click($.proxy(this.imageUploadCallbackLink, this));
 
@@ -1700,31 +1672,25 @@ var RTOOLBAR = {};
 						var url = '';
 					}
 				}
-				
+
 				$('.redactor_link_text').val(text);
 				$('#redactor_link_url').val(url).focus();
 				
 				$('#redactor_insert_link_btn').click($.proxy(this.insertLink, this));
 				
-				if (this.opts.linkFileUpload === false)
+
+				// dragupload
+				if ($('#redactor_file').size() != 0) 
 				{
-					$('#redactor_tabs a').eq(3).remove();
-				}
-				else
-				{
-					// dragupload
-					if ($('#redactor_file').size() != 0) 
+					$('#redactor_file').dragupload(
 					{
-						$('#redactor_file').dragupload(
-						{
-							url: this.opts.linkFileUpload,
-							success: $.proxy(this.insertLinkFile, this)
-						});
-					}
-	
-					// ajax upload
-					this.uploadInit('redactor_file', { auto: true, url: this.opts.linkFileUpload, success: $.proxy(this.insertLinkFile, this)  });
+						url: this.opts.linkFileUpload,
+						success: $.proxy(this.insertLinkFile, this)
+					});
 				}
+
+				// ajax upload
+				this.uploadInit('redactor_file', { auto: true, url: this.opts.linkFileUpload, success: $.proxy(this.insertLinkFile, this)  });
 
 			}, this);
 			
@@ -1872,6 +1838,17 @@ var RTOOLBAR = {};
 
 					$('#redactor_modal_inner').html(data);
 					$('#redactor_modal_header').html(title);
+
+					if (typeof(handler) == 'function') handler();
+					
+					var height = $('#redactor_modal').outerHeight();
+									
+					$('#redactor_modal').css({ width: width + 'px', height: 'auto', marginTop: '-' + (height+10)/2 + 'px', marginLeft: '-' + (width+100)/2 + 'px' }).fadeIn('fast');
+
+					if (scroll === true)
+					{
+						$('#redactor_image_box').height(300).css('overflow', 'auto');
+					}
 					
 					// tabs
 					if ($('#redactor_tabs').size() != 0)
@@ -1894,19 +1871,6 @@ var RTOOLBAR = {};
 					}
 
 					$('#redactor_btn_modal_close').click($.proxy(this.modalClose, this));
-					
-					// callback
-					if (typeof(handler) == 'function') handler();
-					
-					// setup
-					var height = $('#redactor_modal').outerHeight();
-									
-					$('#redactor_modal').css({ width: width + 'px', height: 'auto', marginTop: '-' + (height+10)/2 + 'px', marginLeft: '-' + (width+60)/2 + 'px' }).fadeIn('fast');
-
-					if (scroll === true)
-					{
-						$('#redactor_image_box').height(300).css('overflow', 'auto');
-					}					
 
 				}, this)
 			});
