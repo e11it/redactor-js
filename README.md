@@ -1,10 +1,11 @@
 redactor-js
 ===========
 
-jQuery based WYSIWYG-editor, official author's website: http://redactorjs.com/
+jQuery based WYSIWYG-editor, author's website: http://redactorjs.com/
 
-This is a codebase mirror hosted here for your, my dear Githubbers', convenience!
+Clearly this gem should be hosted on GitHub.
 
+I'm just maintaining the repo and documentation.
 
 ## Screenshot
 ![Redactor in action](https://github.com/dybskiy/redactor-js/raw/master/redactor-js.png)
